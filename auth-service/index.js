@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 app.use(express.json());
 
-const SECRET_KEY = 'your-secret-key-here';
+const SECRET_KEY = '1234';
 const users = [
   { id: 1, username: 'user1', password: 'pass1' },
   { id: 2, username: 'user2', password: 'pass2' }
