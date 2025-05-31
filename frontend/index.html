@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Expense Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .container { display: flex; flex-direction: column; gap: 20px; }
+    .section { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Expense Tracker</h1>
+  <div class="container">
+    <div class="section">
+      <h2>Authentication</h2>
+      <div>
+        <label>Username: <input id="username" value="user1"></label>
+        <label>Password: <input id="password" type="password" value="pass1"></label>
+        <button onclick="login()">Login</button>
+      </div>
+      <p id="token-display" style="word-break: break-all;"></p>
+    </div>
+
+    <div class="section">
+      <h2>Add Expense</h2>
+      <div>
+        <label>Amount: <input id="expense-amount" type="number" value="100"></label>
+        <label>Category: <input id="expense-category" value="Food"></label>
+        <button onclick="addExpense()">Add Expense</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Expenses</h2>
+      <button onclick="getExpenses()">Refresh Expenses</button>
+      <table id="expenses-table">
+        <thead>
+          <tr><th>ID</th><th>Amount</th><th>Category</th><th>Date</th><th>Action</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Reports</h2>
+      <button onclick="getMonthlyReport()">Monthly Summary</button>
+      <button onclick="getCategoryReport()">Category Breakdown</button>
+      <pre id="report-output"></pre>
+    </div>
+  </div>
+
+  <script>
+    let authToken = '';
+    
+    function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          authToken = data.token;
+          document.getElementById('token-display').textContent = `Token: ${authToken}`;
+          alert('Login successful!');
+        } else {
+          alert('Login failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+    
+    function addExpense() {
+      if (!authToken) return alert('Please login first');
+      
+      const amount = document.getElementById('expense-amount').value;
+      const category = document.getElementById('expense-category').value;
+      
+      fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ amount, category })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert('Expense added!');
+        getExpenses();
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+    
+    function getExpenses() {
+      if (!authToken) return alert('Please login first');
+      
+      fetch('/api/expenses', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      })
+      .then(res => res.json())
+      .then(expenses => {
+        const tbody = document.querySelector('#expenses-table tbody');
+        tbody.innerHTML = '';
+        
+        expenses.forEach(expense => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${expense.id}</td>
+            <td>${expense.amount}</td>
+            <td>${expense.category}</td>
+            <td>${expense.date}</td>
+            <td><button onclick="deleteExpense(${expense.id})">Delete</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+    
+    function deleteExpense(id) {
+      if (!authToken) return alert('Please login first');
+      
+      fetch(`/api/expenses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      })
+      .then(() => {
+        alert('Expense deleted!');
+        getExpenses();
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+    
+    function getMonthlyReport() {
+      if (!authToken) return alert('Please login first');
+      
+      fetch('/api/reports/monthly', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('report-output').textContent = 
+          'Monthly Summary:\n' + JSON.stringify(data, null, 2);
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+    
+    function getCategoryReport() {
+      if (!authToken) return alert('Please login first');
+      
+      fetch('/api/reports/categories', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('report-output').textContent = 
+          'Category Breakdown:\n' + JSON.stringify(data, null, 2);
+      })
+      .catch(err => alert('Error: ' + err.message));
+    }
+  </script>
+</body>
+</html>
